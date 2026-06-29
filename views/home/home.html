@@ -1,4 +1,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+<link rel="preload" href="/ai/industries_defect.webm" as="video" type="video/webm" fetchpriority="high">
+<link rel="preload" href="/ai/sam_Unknown.mp4" as="video" type="video/mp4">
+<link rel="preload" href="/assets/videos/home-cover/atomo-home-cover-poster.webp" as="image" fetchpriority="high">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
 
@@ -665,6 +668,7 @@
   .hero-video-stack {
     position: absolute;
     inset: 0;
+    background: #0a0a0a url('/assets/videos/home-cover/atomo-home-cover-poster.webp') center top / cover no-repeat;
   }
 
   #hero-premium {
@@ -1357,7 +1361,8 @@
         muted
         playsinline
         webkit-playsinline
-        preload="metadata"
+        preload="auto"
+        poster="/assets/videos/home-cover/atomo-home-cover-poster.webp"
         disablepictureinpicture
         disableremoteplayback
         x-webkit-airplay="deny"
@@ -1892,11 +1897,19 @@
         'industries_defect.webm',
         'retail_mana.webm',
         'robotic.webm',
-        'sam_Bread.mp4',
-        'sam_football.mp4',
-        'sam_occupied.mp4',
-        'sam_safety_harness.mp4',
         'sam_Unknown.mp4',
+        'sam_occupied.mp4',
+        'sam_football.mp4',
+        'sam_Bread.mp4',
+        'sam_safety_harness.mp4',
+      ];
+
+      const heroMp4Files = [
+        'sam_Unknown.mp4',
+        'sam_occupied.mp4',
+        'sam_football.mp4',
+        'sam_Bread.mp4',
+        'sam_safety_harness.mp4',
       ];
 
       const video = document.getElementById('hero-video');
@@ -1906,6 +1919,12 @@
         /iPad|iPhone|iPod/.test(navigator.userAgent) ||
         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
+      const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      const slowConnection =
+        connection &&
+        (connection.saveData ||
+          /(^2g$)|(^slow-2g$)|(^3g$)/.test(connection.effectiveType || ''));
+
       const probe = document.createElement('video');
       const supportsWebM =
         probe.canPlayType('video/webm; codecs="vp9"') !== '' ||
@@ -1913,14 +1932,11 @@
 
       const compatibleFiles = heroVideoFiles.filter((file) => {
         if (!file.endsWith('.webm')) return true;
-        return !isIOS && supportsWebM;
+        return !isIOS && supportsWebM && !slowConnection;
       });
 
-      const orderedFiles = isIOS
-        ? [
-            ...compatibleFiles.filter((file) => file.endsWith('.mp4')),
-            ...compatibleFiles.filter((file) => !file.endsWith('.mp4')),
-          ]
+      const orderedFiles = isIOS || slowConnection
+        ? heroMp4Files.filter((file) => compatibleFiles.includes(file))
         : compatibleFiles;
 
       const playlist = orderedFiles.map(
@@ -1933,6 +1949,21 @@
       let switching = false;
       let readyListener = null;
       let readyTimeout = null;
+      let prefetchLink = null;
+
+      function prefetchVideo(url) {
+        if (!url || prefetchLink?.href === new URL(url, window.location.origin).href) return;
+        if (prefetchLink) prefetchLink.remove();
+        prefetchLink = document.createElement('link');
+        prefetchLink.rel = 'prefetch';
+        prefetchLink.as = 'video';
+        prefetchLink.href = url;
+        document.head.appendChild(prefetchLink);
+      }
+
+      function prefetchNextVideo(index) {
+        prefetchVideo(playlist[nextIndex(index)]);
+      }
 
       function clearReadyHandlers() {
         if (readyListener) {
@@ -1954,7 +1985,7 @@
         video.setAttribute('playsinline', '');
         video.setAttribute('webkit-playsinline', '');
         video.loop = false;
-        video.preload = isIOS ? 'metadata' : 'auto';
+        video.preload = 'auto';
         video.controls = false;
       }
 
@@ -1965,6 +1996,8 @@
         while (video.firstChild) video.removeChild(video.firstChild);
         video.load();
         video.src = src;
+        video.setAttribute('playsinline', '');
+        video.setAttribute('webkit-playsinline', '');
         video.load();
       }
 
@@ -1998,6 +2031,7 @@
           playWithRetry()
             .then(() => {
               switching = false;
+              prefetchNextVideo(currentIndex);
             })
             .catch(() => {
               switching = false;
@@ -2016,7 +2050,7 @@
 
         readyTimeout = window.setTimeout(() => {
           if (switching) startPlayback();
-        }, isIOS ? 3500 : 2000);
+        }, 1200);
       }
 
       function advance() {
@@ -2074,8 +2108,9 @@
         });
       });
 
-      window.setInterval(resumePlayback, isIOS ? 2000 : 1500);
+      window.setInterval(resumePlayback, 2000);
 
+      prefetchVideo(playlist[0]);
       playIndex(0);
     });
   </script>
