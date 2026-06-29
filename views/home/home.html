@@ -671,6 +671,10 @@
     background: #0a0a0a url('/assets/videos/home-cover/atomo-home-cover-poster.webp') center top / cover no-repeat;
   }
 
+  .hero-video-stack.is-ready {
+    background: #000;
+  }
+
   #hero-premium {
     margin-top: var(--nav-height, 60px);
     height: calc(100svh - var(--nav-height, 60px));
@@ -704,10 +708,19 @@
     height: 100%;
     object-fit: cover;
     object-position: center top;
-    opacity: 1;
     background: #000;
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .hero-video-layer.is-active {
+    opacity: 1;
+    visibility: visible;
+    z-index: 1;
   }
 
   /* Section 3 — Intelligent Infrastructure */
@@ -1356,13 +1369,23 @@
     <div class="hero-video-stack" aria-hidden="true">
       <video
         class="hero-video hero-video-layer is-active"
-        id="hero-video"
+        id="hero-video-a"
         autoplay
         muted
         playsinline
         webkit-playsinline
         preload="auto"
-        poster="/assets/videos/home-cover/atomo-home-cover-poster.webp"
+        disablepictureinpicture
+        disableremoteplayback
+        x-webkit-airplay="deny"
+      ></video>
+      <video
+        class="hero-video hero-video-layer"
+        id="hero-video-b"
+        muted
+        playsinline
+        webkit-playsinline
+        preload="auto"
         disablepictureinpicture
         disableremoteplayback
         x-webkit-airplay="deny"
@@ -1912,8 +1935,13 @@
         'sam_safety_harness.mp4',
       ];
 
-      const video = document.getElementById('hero-video');
-      if (!video) return;
+      const stack = document.querySelector('.hero-video-stack');
+      const layers = [
+        document.getElementById('hero-video-a'),
+        document.getElementById('hero-video-b'),
+      ];
+
+      if (!layers[0] || !layers[1] || !stack) return;
 
       const isIOS =
         /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -1946,10 +1974,37 @@
       if (!playlist.length) return;
 
       let currentIndex = 0;
-      let switching = false;
-      let readyListener = null;
-      let readyTimeout = null;
+      let activeLayer = 0;
+      let advancing = false;
+      let nextPrepared = false;
       let prefetchLink = null;
+
+      function normalizePath(src) {
+        if (!src) return '';
+        try {
+          return decodeURIComponent(new URL(src, window.location.origin).pathname);
+        } catch {
+          return src;
+        }
+      }
+
+      function inactiveLayer() {
+        return 1 - activeLayer;
+      }
+
+      function nextIndex(index) {
+        return (index + 1) % playlist.length;
+      }
+
+      function setActiveLayer(layerIndex) {
+        layers.forEach((layer, index) => {
+          layer.classList.toggle('is-active', index === layerIndex);
+        });
+      }
+
+      function markReady() {
+        stack.classList.add('is-ready');
+      }
 
       function prefetchVideo(url) {
         if (!url || prefetchLink?.href === new URL(url, window.location.origin).href) return;
@@ -1961,135 +2016,147 @@
         document.head.appendChild(prefetchLink);
       }
 
-      function prefetchNextVideo(index) {
-        prefetchVideo(playlist[nextIndex(index)]);
+      function configureLayer(layer) {
+        layer.muted = true;
+        layer.defaultMuted = true;
+        layer.playsInline = true;
+        layer.setAttribute('playsinline', '');
+        layer.setAttribute('webkit-playsinline', '');
+        layer.loop = false;
+        layer.preload = 'auto';
+        layer.controls = false;
+        layer.removeAttribute('poster');
       }
 
-      function clearReadyHandlers() {
-        if (readyListener) {
-          video.removeEventListener('loadeddata', readyListener);
-          video.removeEventListener('canplay', readyListener);
-          readyListener = null;
+      function loadLayer(layer, src) {
+        if (normalizePath(layer.currentSrc || layer.src) !== normalizePath(src)) {
+          layer.src = src;
+          layer.load();
         }
-        if (readyTimeout) {
-          clearTimeout(readyTimeout);
-          readyTimeout = null;
-        }
       }
 
-      function configureVideoElement() {
-        video.muted = true;
-        video.defaultMuted = true;
-        video.autoplay = true;
-        video.playsInline = true;
-        video.setAttribute('playsinline', '');
-        video.setAttribute('webkit-playsinline', '');
-        video.loop = false;
-        video.preload = 'auto';
-        video.controls = false;
-      }
-
-      function setVideoSource(src) {
-        clearReadyHandlers();
-        video.pause();
-        video.removeAttribute('src');
-        while (video.firstChild) video.removeChild(video.firstChild);
-        video.load();
-        video.src = src;
-        video.setAttribute('playsinline', '');
-        video.setAttribute('webkit-playsinline', '');
-        video.load();
-      }
-
-      function nextIndex(index) {
-        return (index + 1) % playlist.length;
-      }
-
-      function tryPlay() {
-        video.muted = true;
-        return video.play().catch(() => Promise.reject());
-      }
-
-      function playWithRetry(attempt = 0) {
-        return tryPlay().catch(() => {
+      function playWithRetry(layer, attempt = 0) {
+        layer.muted = true;
+        return layer.play().catch(() => {
           if (attempt >= 4) return Promise.reject();
           return new Promise((resolve) => {
             window.setTimeout(() => {
-              resolve(playWithRetry(attempt + 1));
+              resolve(playWithRetry(layer, attempt + 1));
             }, 250 * (attempt + 1));
           });
         });
       }
 
-      function playIndex(index) {
-        switching = true;
-        currentIndex = index;
-        setVideoSource(playlist[index]);
+      function prepareInactiveNext() {
+        if (nextPrepared || advancing) return;
+        const inactive = layers[inactiveLayer()];
+        loadLayer(inactive, playlist[nextIndex(currentIndex)]);
+        inactive.currentTime = 0;
+        nextPrepared = true;
+        prefetchVideo(playlist[nextIndex(currentIndex)]);
+      }
 
-        const startPlayback = () => {
-          clearReadyHandlers();
-          playWithRetry()
-            .then(() => {
-              switching = false;
-              prefetchNextVideo(currentIndex);
-            })
-            .catch(() => {
-              switching = false;
-              advance();
-            });
+      function playOnLayer(layerIndex, index) {
+        advancing = true;
+        const layer = layers[layerIndex];
+        loadLayer(layer, playlist[index]);
+        layer.currentTime = 0;
+        setActiveLayer(layerIndex);
+        activeLayer = layerIndex;
+        currentIndex = index;
+        nextPrepared = false;
+
+        return playWithRetry(layer)
+          .then(() => {
+            advancing = false;
+            markReady();
+          })
+          .catch(() => {
+            advancing = false;
+            advancePlaylist();
+          });
+      }
+
+      function advancePlaylist() {
+        if (advancing) return;
+        advancing = true;
+        nextPrepared = false;
+
+        const targetIndex = nextIndex(currentIndex);
+        const targetLayer = inactiveLayer();
+        const currentVideo = layers[activeLayer];
+        const nextVideo = layers[targetLayer];
+
+        loadLayer(nextVideo, playlist[targetIndex]);
+        nextVideo.currentTime = 0;
+
+        const finishSwap = () => {
+          currentVideo.pause();
+          setActiveLayer(targetLayer);
+          activeLayer = targetLayer;
+          currentIndex = targetIndex;
+          advancing = false;
+          markReady();
         };
 
-        if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-          startPlayback();
-          return;
-        }
+        const onPlaying = () => {
+          nextVideo.removeEventListener('playing', onPlaying);
+          finishSwap();
+        };
 
-        readyListener = () => startPlayback();
-        video.addEventListener('loadeddata', readyListener);
-        video.addEventListener('canplay', readyListener);
-
-        readyTimeout = window.setTimeout(() => {
-          if (switching) startPlayback();
-        }, 1200);
+        playWithRetry(nextVideo)
+          .then(() => {
+            if (nextVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && !nextVideo.paused) {
+              finishSwap();
+              return;
+            }
+            nextVideo.addEventListener('playing', onPlaying);
+          })
+          .catch(() => {
+            advancing = false;
+            finishSwap();
+            window.setTimeout(advancePlaylist, 300);
+          });
       }
 
-      function advance() {
-        if (switching) return;
-        playIndex(nextIndex(currentIndex));
-      }
+      layers.forEach((layer, index) => {
+        configureLayer(layer);
+
+        layer.addEventListener('ended', () => {
+          if (index === activeLayer) advancePlaylist();
+        });
+
+        layer.addEventListener('timeupdate', () => {
+          if (index !== activeLayer || advancing) return;
+          const { currentTime, duration } = layer;
+          if (Number.isFinite(duration) && duration > 0 && currentTime / duration >= 0.72) {
+            prepareInactiveNext();
+          }
+        });
+
+        layer.addEventListener('error', () => {
+          if (index === activeLayer && !advancing) advancePlaylist();
+        });
+
+        layer.addEventListener('stalled', () => {
+          if (index === activeLayer && !advancing && !document.hidden) {
+            playWithRetry(layer).catch(() => advancePlaylist());
+          }
+        });
+      });
 
       function resumePlayback() {
-        if (switching || document.hidden) return;
+        if (advancing || document.hidden) return;
+        const video = layers[activeLayer];
+        if (!video) return;
         if (video.ended) {
-          advance();
+          advancePlaylist();
           return;
         }
         if (video.paused && video.readyState >= HTMLMediaElement.HAVE_METADATA) {
-          playWithRetry().catch(() => advance());
+          playWithRetry(video).catch(() => advancePlaylist());
         }
       }
-
-      function unlockPlayback() {
-        resumePlayback();
-      }
-
-      configureVideoElement();
-
-      video.addEventListener('ended', advance);
-
-      video.addEventListener('error', () => {
-        if (!switching) advance();
-      });
-
-      video.addEventListener('stalled', () => {
-        if (!switching && !document.hidden) resumePlayback();
-      });
-
-      video.addEventListener('waiting', () => {
-        if (!switching && !document.hidden) {
-          window.setTimeout(resumePlayback, 400);
-        }
-      });
 
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) resumePlayback();
@@ -2102,7 +2169,7 @@
       window.addEventListener('focus', resumePlayback);
 
       ['touchstart', 'touchend', 'click'].forEach((eventName) => {
-        document.addEventListener(eventName, unlockPlayback, {
+        document.addEventListener(eventName, resumePlayback, {
           once: true,
           passive: true,
         });
@@ -2111,6 +2178,6 @@
       window.setInterval(resumePlayback, 2000);
 
       prefetchVideo(playlist[0]);
-      playIndex(0);
+      playOnLayer(0, 0);
     });
   </script>
