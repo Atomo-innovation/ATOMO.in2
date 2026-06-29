@@ -30,7 +30,7 @@
 
   @media (max-width: 639px) {
     .hero-content {
-      margin-left: -12px;
+      margin-left: 0;
     }
   }
 
@@ -1139,25 +1139,95 @@
     .section-5-layout {
       flex: none;
     }
-  }
 
-  @media (max-width: 767px) {
+    /* Mobile / tablet hero — full horizontal video + content below */
     #hero-premium {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
       height: auto;
-      min-height: calc(100svh - var(--nav-height, 60px));
+      min-height: 0;
       overflow: visible;
+      background: #0a0a0a;
+    }
+
+    .hero-media {
+      position: relative;
+      inset: auto;
+      flex: 0 0 auto;
+      width: 100%;
+      height: auto;
+    }
+
+    .hero-video-stack {
+      position: relative;
+      inset: auto;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      height: auto;
+      background-color: #000;
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    .hero-video-stack.is-ready {
+      background-color: #000;
+    }
+
+    .hero-video-layer {
+      object-fit: contain;
+      object-position: center center;
+    }
+
+    .hero-video {
+      filter: brightness(0.96) contrast(1.04) saturate(1.05);
+    }
+
+    .hero-media__overlay,
+    .hero-video-vignette {
+      display: none;
     }
 
     .hero-inner {
+      position: relative;
+      z-index: 1;
+      flex: 1 1 auto;
+      width: 100%;
+      min-height: 0;
+      height: auto;
       justify-content: flex-start;
-      padding-top: 1.25rem;
-      padding-bottom: 2.5rem;
+      padding-top: 1.5rem;
+      padding-bottom: calc(2.5rem + env(safe-area-inset-bottom, 0px));
+      background: linear-gradient(180deg, #0a0a0a 0%, #111827 100%);
     }
 
     .hero-content {
       margin-left: 0;
-      margin-top: 1.25rem;
+      margin-top: 0;
       max-width: 100%;
+    }
+
+    .hero-headline {
+      color: #ffffff;
+    }
+
+    .hero-subtitle {
+      color: rgba(255, 255, 255, 0.92);
+    }
+  }
+
+  @media (max-width: 767px) {
+    #hero-premium {
+      overflow: visible;
+    }
+
+    .hero-inner {
+      padding-top: 1.25rem;
+    }
+
+    .hero-content {
+      margin-top: 0;
     }
 
     .hero-eyebrow,
@@ -1365,7 +1435,7 @@
   <!-- HERO SECTION - Updated Headline Color -->
 <section class="relative flex items-center overflow-hidden" id="hero-premium">
   <!-- Background Video -->
-  <div class="absolute inset-0 z-0">
+  <div class="hero-media absolute inset-0 z-0">
     <div class="hero-video-stack" aria-hidden="true">
       <video
         class="hero-video hero-video-layer is-active"
@@ -1391,8 +1461,8 @@
         x-webkit-airplay="deny"
       ></video>
     </div>
-    <div class="absolute inset-0 bg-gradient-to-r from-black/40 via-black/32 to-black/40"></div>
-    <div class="absolute inset-0 bg-gradient-to-t from-black/28 via-transparent to-black/14 pointer-events-none"></div>
+    <div class="hero-media__overlay absolute inset-0 bg-gradient-to-r from-black/40 via-black/32 to-black/40"></div>
+    <div class="hero-media__overlay absolute inset-0 bg-gradient-to-t from-black/28 via-transparent to-black/14 pointer-events-none"></div>
     <div class="hero-video-vignette" aria-hidden="true"></div>
   </div>
 
