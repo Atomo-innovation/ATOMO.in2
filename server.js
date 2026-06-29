@@ -28,6 +28,7 @@ for (const rule of redirects) {
 }
 
 app.use(express.static(path.join(__dirname, "public"), { index: false }));
+app.use("/ai2", express.static(path.join(__dirname, "ai2")));
 app.use("/images", express.static(path.join(__dirname, "images")));
 app.use("/section2icon", express.static(path.join(__dirname, "section2icon")));
 
