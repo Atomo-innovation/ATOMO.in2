@@ -65,8 +65,32 @@
   }
 
   .hero-eyebrow {
+    position: relative;
+    z-index: 0;
     filter: drop-shadow(0 0 14px rgba(249, 115, 22, 0.22));
     margin: 0 0 1.35rem;
+  }
+
+  @media (min-width: 1024px) {
+    .hero-eyebrow {
+      padding: 0;
+      background: linear-gradient(
+        105deg,
+        #ffedd5 0%,
+        #fdba74 35%,
+        #fb923c 70%,
+        #f97316 100%
+      );
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      font-weight: 700;
+      letter-spacing: 0.13em;
+      filter:
+        drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9))
+        drop-shadow(0 0 16px rgba(0, 0, 0, 0.55));
+    }
   }
 
   .section-2-eyebrow {
@@ -692,6 +716,68 @@
     filter: brightness(0.84) contrast(1.06) saturate(1.02);
   }
 
+  .hero-media__overlay {
+    pointer-events: none;
+  }
+
+  @media (min-width: 1024px) {
+    .hero-video {
+      filter: brightness(0.56) contrast(1.05) saturate(1.02);
+    }
+
+    .hero-media__overlay--veil {
+      background: rgba(6, 8, 14, 0.52);
+    }
+
+    .hero-media__overlay--content {
+      background: linear-gradient(
+        96deg,
+        rgba(4, 6, 12, 0.78) 0%,
+        rgba(4, 6, 12, 0.58) 36%,
+        rgba(4, 6, 12, 0.32) 58%,
+        rgba(4, 6, 12, 0.16) 100%
+      );
+    }
+
+    .hero-media__overlay--depth {
+      background: linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.48) 0%,
+        transparent 26%,
+        transparent 74%,
+        rgba(0, 0, 0, 0.42) 100%
+      );
+    }
+
+    .hero-video-vignette {
+      background:
+        radial-gradient(
+          ellipse 108% 100% at 50% 50%,
+          transparent 42%,
+          rgba(0, 0, 0, 0.18) 72%,
+          rgba(0, 0, 0, 0.38) 100%
+        );
+    }
+
+    .hero-headline {
+      text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+    }
+
+    .hero-headline__accent {
+      text-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
+    }
+
+    .hero-subtitle {
+      text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
+    }
+
+    .hero-eyebrow {
+      filter:
+        drop-shadow(0 1px 2px rgba(0, 0, 0, 0.85))
+        drop-shadow(0 0 12px rgba(0, 0, 0, 0.45));
+    }
+  }
+
   .hero-video-vignette {
     position: absolute;
     inset: 0;
@@ -1247,17 +1333,49 @@
 
   @media (max-width: 767px) {
     #hero-premium {
-      overflow: visible;
+      height: calc(100svh - var(--nav-height, 60px));
+      min-height: calc(100svh - var(--nav-height, 60px));
+      overflow: hidden;
+      background: #000;
     }
 
-    .hero-copy-head {
-      padding-top: 1rem;
-      padding-left: 1.5rem;
-      padding-right: 1.5rem;
+    /* Phone hero: full-screen background video, centered content */
+    .hero-inner {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100%;
+      height: 100%;
+      padding-top: 0;
+      padding-bottom: 0;
     }
 
     .hero-content {
-      margin-top: 0;
+      display: block;
+      width: 100%;
+      max-width: 34rem;
+      margin: 0 auto;
+      padding: 0 1.25rem;
+      box-sizing: border-box;
+      text-align: center;
+    }
+
+    .hero-copy-head,
+    .hero-subtitle,
+    .hero-cta {
+      width: auto;
+      max-width: none;
+      margin: 0;
+      padding: 0;
+      background: transparent;
+    }
+
+    .hero-copy-head .hero-eyebrow {
+      margin-bottom: 0.85rem;
+    }
+
+    .hero-headline {
+      margin-bottom: 1.25rem;
     }
 
     .hero-eyebrow,
@@ -1274,6 +1392,32 @@
     .hero-subtitle {
       margin-bottom: 1.75rem;
       font-size: 0.9375rem;
+    }
+
+    /* Make video fill screen on phones */
+    .hero-media {
+      position: absolute;
+      inset: 0;
+    }
+
+    .hero-video-stack {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      aspect-ratio: auto;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .hero-video-layer {
+      object-fit: cover;
+      object-position: center center;
+    }
+
+    .hero-media__overlay,
+    .hero-video-vignette {
+      display: block;
     }
 
     #hero-premium .hero-cta a {
@@ -1491,8 +1635,9 @@
         x-webkit-airplay="deny"
       ></video>
     </div>
-    <div class="hero-media__overlay absolute inset-0 bg-gradient-to-r from-black/40 via-black/32 to-black/40"></div>
-    <div class="hero-media__overlay absolute inset-0 bg-gradient-to-t from-black/28 via-transparent to-black/14 pointer-events-none"></div>
+    <div class="hero-media__overlay hero-media__overlay--veil absolute inset-0"></div>
+    <div class="hero-media__overlay hero-media__overlay--content absolute inset-0"></div>
+    <div class="hero-media__overlay hero-media__overlay--depth absolute inset-0"></div>
     <div class="hero-video-vignette" aria-hidden="true"></div>
   </div>
 
@@ -2019,22 +2164,11 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const heroVideoFiles = [
-        'industries_defect.webm',
-        'retail_mana.webm',
-        'robotic.webm',
-        'sam_Unknown.mp4',
-        'sam_occupied.mp4',
-        'sam_football.mp4',
-        'sam_Bread.mp4',
-        'sam_safety_harness.mp4',
+        'demo.mp4',
       ];
 
       const heroMp4Files = [
-        'sam_Unknown.mp4',
-        'sam_occupied.mp4',
-        'sam_football.mp4',
-        'sam_Bread.mp4',
-        'sam_safety_harness.mp4',
+        'demo.mp4',
       ];
 
       const stack = document.querySelector('.hero-video-stack');
@@ -2074,6 +2208,54 @@
       );
 
       if (!playlist.length) return;
+
+      // Single-video mode: avoid layer swapping (which can cause flicker)
+      // and rely on native looping for the smoothest experience.
+      if (playlist.length === 1) {
+        layers.forEach((layer, index) => {
+          configureLayer(layer);
+          layer.loop = true;
+          layer.src = playlist[0];
+          layer.load();
+          layer.addEventListener('error', () => {
+            // Try to restart the same video if a transient network error occurs.
+            layer.load();
+            playWithRetry(layer).catch(() => Promise.resolve());
+          });
+          layer.addEventListener('stalled', () => {
+            if (document.hidden) return;
+            playWithRetry(layer).catch(() => Promise.resolve());
+          });
+          if (index !== 0) {
+            layer.pause();
+          }
+        });
+
+        setActiveLayer(0);
+        prefetchVideo(playlist[0]);
+        playWithRetry(layers[0]).then(markReady).catch(() => Promise.resolve());
+
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) return;
+          const v = layers[0];
+          if (v && v.paused) playWithRetry(v).catch(() => Promise.resolve());
+        });
+
+        window.addEventListener('pageshow', (event) => {
+          if (!event.persisted) return;
+          const v = layers[0];
+          if (v && v.paused) playWithRetry(v).catch(() => Promise.resolve());
+        });
+
+        ['touchstart', 'touchend', 'click'].forEach((eventName) => {
+          document.addEventListener(eventName, () => {
+            const v = layers[0];
+            if (v && v.paused) playWithRetry(v).catch(() => Promise.resolve());
+          }, { once: true, passive: true });
+        });
+
+        return;
+      }
 
       let currentIndex = 0;
       let activeLayer = 0;
